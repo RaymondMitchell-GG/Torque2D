@@ -16,14 +16,15 @@ function TimeBar::UpdateTime( %this, %timeleft)
 {
    // Set our time left
    %this.TimeLeft = %timeleft;
-   // Get the width of the timebar
+   // Get the width of the timebar   
    %baseWidth = %this.getWidth();
    // Calculate the width of the back bar for time remaining.
    %newWidth = %baseWidth * %this.TimeLeft;
    // Set the width of the back bar.
    %this.TimeBack.setWidth(%newWidth);
    // Calculate the new position with an offset for the back bar so it is left justified.
-   %newXPos = %this.getPositionX() - ((%baseWidth - %newWidth)/2);
+   %position = %this.getPosition();
+   %newXPos = %position.x - ((%baseWidth - %newWidth)/2);
    // Set the back bar's new position
    %this.TimeBack.setPositionX(%newXPos);
    // Update the back bars color

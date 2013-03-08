@@ -11,10 +11,20 @@ function nextButton::onTouchDown(%this, %modifier, %worldPosition, %clicks)
    // If sound is enabled, play the select option sound
    if (PuzzleToy.soundEnabled)
       alxPlay("PuzzleToy:SelectOptionSound");
+      
+   // if we aren't complete, let's save the current level
+   if (PuzzleToy.nextBoard !$= "LevelComplete" && PuzzleToy.nextBoard !$= "mainMenu")
+   {
+      PuzzleToy.savedata.currentLevel = PuzzleToy.nextBoard;      
+      // This isn't used yet, but we will update our high score here
+      PuzzleToy.savedata.highScore = 0;      
+      // write the save file
+      PuzzleToy.saveUserData();
+      
+   }   
    
    // Since our scenes only store the simple name of the level, call setSelectedLevel
    // so it can create the full filename.
-   PuzzleToy.setSelectedLevel(SandboxScene.NextLevel);   
-   
+   PuzzleToy.setSelectedLevel(PuzzleToy.nextBoard);   
    
 }

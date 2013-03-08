@@ -32,6 +32,7 @@ function gamePiece::onAdd(%this)
 	%this.currentDeltaY = 0;	
 	
 }
+
 ///-----------------------------------------------------------------------------
 /// get the color string from the color index
 /// param %colorNumber - color index
@@ -54,10 +55,19 @@ function gamePiece::setPieceBlendColor(%this)
    if (%this.bSelected)   
       %alpha = 0.75;
    // set the blend color to white with the supplied alpha
-   %this.setBlendColor(1.0, 1.0, 1.0, %alpha);   
-   // Our game piece uses an image with multiple frames for the different colors
-   // set the frame to the color index.
-   %this.setImageFrame( %this.color );   
+   if (%this.PieceType $= "bomb")
+   {      
+      %this.setBlendColor(getWord(PuzzleToy.colors, %this.color));
+   }
+   else
+   {
+      %this.setBlendColor(1.0, 1.0, 1.0, %alpha);   
+      // Our game piece uses an image with multiple frames for the different colors
+      // set the frame to the color index.
+      if (%this.PieceType $= "default")
+         %this.setImageFrame( %this.color );   
+         
+   }
 }
 ///-----------------------------------------------------------------------------
 /// Set the object to selected or not so it renders correctly
@@ -93,22 +103,30 @@ function gamePiece::pickColor(%this)
 {
    // set tempcolor to 0 so we can use the while loop
    %tempcolor = 0;
-   // I want a good amount of randomness, so I'm going to use a much larger range
-   // for my random numbers, this means I need to know what to divide the result
-   // by to get my actual color index.   
-   %divisor = 1000/%this.gameBoard.ColorCount;
-   // while the color is 0 or less, keep trying for a good color
-   while (%tempcolor <= 0)
+   
+   switch$(%this.PieceType)
    {
+      case "bucket":
+      %tempcolor = 9;
+      case "eraser":  
+      %tempcolor = 10;
+      case "bomb":
+      %divisor = 1000/%this.gameBoard.ColorCount;
+      %tempcolor = mCeil(getRandom(1, 1000)/%divisor) - 1;
+      default:
+      // I want a good amount of randomness, so I'm going to use a much larger range
+      // for my random numbers, this means I need to know what to divide the result
+      // by to get my actual color index.   
+      %divisor = 1000/%this.gameBoard.ColorCount;
       // pick a random number and divide by our divisor.  This should be
       // a number between 1 and our color count.
-      %tempcolor = mCeil(getRandom(0, 1000)/%divisor);  
+      %tempcolor = mCeil(getRandom(1, 1000)/%divisor) - 1;
+   }   
       
-   }
    // set the color to the random number minus 1.  I was getting alot of 0's so 
    // I do this to ignore any 0 values.  But we have a color that is zero so I have
    // to offset my results.
-   %this.color = %tempcolor - 1;
+   %this.color = %tempcolor;
    // Set the pieces color based on the random color we just got.
    %this.setPieceBlendColor();
    // We have picked a color, so set bColorSet to true.
@@ -138,9 +156,10 @@ function gamePiece::updateTargetLocation(%this)
    // until we know what gameboard we are attached to.
    if(%this.bGameBoardSet)
    {
-      // Get our current X and Y positions
-      %currentX = %this.getPositionX();
-      %currentY = %this.getPositionY();
+      // Get our current X and Y positions      
+      %position = %this.getPosition();
+      %currentX = %position.x;
+      %currentY = %position.y;
       // Calculate where we should be based on our locationX and Y indexes.      
       %this.destX = (%this.gameBoard.startLocationX + (%this.locationX * %this.gameBoard.PieceSize));
       %this.destY = (%this.gameBoard.startLocationY + (%this.locationY * %this.gameBoard.PieceSize));
@@ -269,8 +288,8 @@ function gamePiece::onTouchDragged(%this, %modifier, %worldPosition, %clicks)
    if (%this.bSelected)
    {
       // get the drag delta by using the previousPosition and the current worldPosition.
-      %deltaX = getWord(%this.previousPosition, 0) - getWord(%worldPosition, 0);
-      %deltaY = getWord(%this.previousPosition, 1) - getWord(%worldPosition, 1);
+      %deltaX = %this.previousPosition.x - %worldPosition.x;
+      %deltaY = %this.previousPosition.y - %worldPosition.y;
       // Add the new delta to the overall currentDelta values.
       %this.currentDeltaX += %deltaX;
       %this.currentDeltaY += %deltaY;
@@ -283,11 +302,13 @@ function gamePiece::onTouchDragged(%this, %modifier, %worldPosition, %clicks)
             // If the current delta is positive, select left, otherwise select right
             if (%this.currentDeltaX > 0 && %this.locationX > 0)
             {
-               %this.gameBoard.setSelectedPiece(%this.gameBoard.gamePieces[%this.locationX - 1, %this.locationY]);
+               %this.gameBoard.setSelectedLocation(%this.locationX - 1, %this.locationY); 
+               // %this.gameBoard.setSelectedPiece(%this.gameBoard.gamePieces[%this.locationX - 1, %this.locationY]);
             }
             else if (%this.locationX < %this.gameBoard.cellCountX - 1)
             {
-               %this.gameBoard.setSelectedPiece(%this.gameBoard.gamePieces[%this.locationX + 1, %this.locationY]);
+               %this.gameBoard.setSelectedLocation(%this.locationX + 1, %this.locationY);
+               // %this.gameBoard.setSelectedPiece(%this.gameBoard.gamePieces[%this.locationX + 1, %this.locationY]);
             }
          }
          else
@@ -295,11 +316,13 @@ function gamePiece::onTouchDragged(%this, %modifier, %worldPosition, %clicks)
             // If the current delta is positive, select down, otherwise select up.
             if (%this.currentDeltaY > 0 && %this.locationY > 0)
             {
-               %this.gameBoard.setSelectedPiece(%this.gameBoard.gamePieces[%this.locationX, %this.locationY - 1]);               
+               %this.gameBoard.setSelectedLocation(%this.locationX, %this.locationY - 1);
+               // %this.gameBoard.setSelectedPiece(%this.gameBoard.gamePieces[%this.locationX, %this.locationY - 1]);               
             }
             else if (%this.locationY < %this.gameBoard.cellCountY - 1)
             {
-               %this.gameBoard.setSelectedPiece(%this.gameBoard.gamePieces[%this.locationX, %this.locationY + 1]);
+               %this.gameBoard.setSelectedLocation(%this.locationX, %this.locationY + 1);
+               // %this.gameBoard.setSelectedPiece(%this.gameBoard.gamePieces[%this.locationX, %this.locationY + 1]);
             }
          }
          // Now that we selected, reset the currentDeltas.

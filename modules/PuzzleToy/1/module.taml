@@ -11,6 +11,18 @@
 		<DeclaredAssets
 			Path="assets"
 			Extension="asset.taml"
-			Recurse="true"/>		
+			Recurse="true"/>
+      <ReferencedAssets
+         Path="levels"
+         Extension="scene.taml"
+         Recurse="true"/>
+      <ReferencedAssets
+         Path="scriptobjects"
+         Extension="sprite.taml"
+         Recurse="true"/>
+      <ReferencedAssets
+         Path="scriptobjects"
+         Extension="boarddata.baml"
+         Recurse="true"/>
 </ModuleDefinition>
 

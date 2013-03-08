@@ -5,6 +5,6 @@
 		Position="-700 -460"
 		UseInputEvents="1"
 		LinearDamping="0"		
-		Image="PuzzleToy:GamePiece"
-		Frame="1"
-		size="8.0 8.0" />
+		Image="@asset=PuzzleToy:GamePiece"		
+		size="8.0 8.0"
+		PieceType="default" />

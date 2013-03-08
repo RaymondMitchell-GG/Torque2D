@@ -7,28 +7,43 @@
 ///-----------------------------------------------------------------------------
 function PuzzleToy::create( %this )
 {
+   // When we create the toy, we want to check for a save file.
+   // set up our path and filename for save data.   
+   PuzzleToy.savedirectory = getUserDataDirectory() @ "/puzzletoy";
+   PuzzleToy.savepath = PuzzleToy.savedirectory @ "/PuzzleToy.savedata";
+   // load user data
+   PuzzleToy.loadUserData();
+                    
    // This is a tab separated list of color strings so that we can use a color index
    // to store a game pieces color and then use this list to find out it's color string
    // We do this using getWord(PuzzleToy::colors, index)
-   PuzzleToy.colors =  "Black" TAB "White" TAB "Red" TAB "Blue" TAB "Yellow" TAB 
-                     "Green" TAB "Orange" TAB "Purple" TAB "Grey" TAB "Bucket" 
-                     TAB "Bomb" TAB "Eraser"; 
-   // default the current level to the main menu scene.
-   PuzzleToy.currentLevel = "./levels/mainMenu.scene.taml";
+   PuzzleToy.colors =  "Gray" TAB "White" TAB "Red" TAB "Blue" TAB "Yellow" TAB 
+                     "Green" TAB "Orange" TAB "Purple" TAB "Grey" TAB "Bucket" TAB "Eraser";
    
+   // default the current level to the main menu scene.
+   PuzzleToy.currentLevel = "./levels/mainMenu.scene.taml";   
+   PuzzleToy.currentLevelNumber = PuzzleToy.savedata.currentLevelNumber;
    // load up my game specific game scripts    
    exec("./scripts/gamescripts/gameBoard.cs");   
    exec("./scripts/gamescripts/gamePiece.cs");
    exec("./scripts/gamescripts/soundButton.cs");   
    exec("./scripts/gamescripts/startButton.cs");
+   exec("./scripts/gamescripts/continueButton.cs");
+   exec("./scripts/gamescripts/galleryButton.cs");
    exec("./scripts/gamescripts/nextButton.cs");
    exec("./scripts/gamescripts/mainMenuButton.cs");
    exec("./scripts/gamescripts/timeBar.cs");
+   exec("./scripts/gamescripts/nextLevelButton.cs");
+   exec("./scripts/gamescripts/completeImage.cs");
+   exec("./scripts/gamescripts/galleryViewer.cs");
+   exec("./scripts/gamescripts/imageViewer.cs");
    // Set some global variables
    // this will be false until the options, level time etc are set.
    PuzzleToy.bToyInit = false;	
 	PuzzleToy.soundEnabled = true;	
 	PuzzleToy.LevelTime = 360000;	
+	// number of levels
+	PuzzleToy.NumberOfLevels = 6;
 	
 	// add some options in the tool ui.
 	addNumericOption("LevelTime in Minutes", 1, 10, 1, "setLevelTime", 6,  true);
@@ -43,6 +58,56 @@ function PuzzleToy::create( %this )
       
 }
 
+function PuzzleToy::saveUserData(%this)
+{
+   %userdata = PuzzleToy.savedata;
+   if (isObject(%userdata))
+   {
+      if (!isDirectory(PuzzleToy.savedirectory))
+         createPath(PuzzleToy.savedirectory);      
+      
+      TamlWrite(%userdata, PuzzleToy.savepath, binary);
+   }
+   else
+   {      
+      %this.createUserData();
+   }   
+}
+
+function PuzzleToy::loadUserData(%this)
+{
+   if (isDirectory(PuzzleToy.savedirectory) && isFile(PuzzleToy.savepath))
+   {
+      PuzzleToy.savedata = TamlRead(PuzzleToy.savepath, binary);      
+   }
+   else
+   {
+      PuzzleToy.createUserData();
+   }
+   
+}
+
+function PuzzleToy::createUserData(%this)
+{
+   // if the save directory doesn't exist, create it.
+   if (!isDirectory(PuzzleToy.savedirectory))
+   {
+      createPath(PuzzleToy.savedirectory);
+   }
+   
+   // setup default player data
+   %savedata = new ScriptObject();
+   %savedata.currentLevelNumber = 1;
+   %savedata.currentLevel = 1-1;
+   %savedata.highestComplete = 0;
+   %savedata.highScore = 0;   
+   
+   // set the current save data so we can access it
+   PuzzleToy.savedata = %savedata;
+   // write the default save data
+   TamlWrite(%savedata, PuzzleToy.savepath, binary);
+}
+
 ///-----------------------------------------------------------------------------
 /// set the selected level
 /// Param %value The base level name without the path or ".scene.taml" added
@@ -54,8 +119,16 @@ function PuzzleToy::setSelectedLevel( %this, %value )
    // this is to keep from resetting when the toolbox options are added.
    if (PuzzleToy.bToyInit)
    {
+      // set the current Board
+      PuzzleToy.currentBoard = %value;
       // Create the filename string.
       %levelToLoad = "./levels/" @ %value @ ".scene.taml";
+      // this isn't the main menu, then we want gameplay      
+      if (%value !$= "mainMenu" && %value !$= "LevelComplete")
+      {                 
+         PuzzleToy.currentLevelNumber = getSubStr(%value, 0, 1);
+         %levelToLoad = "./levels/GamePlay.scene.taml";
+      } 
       // Load the level and show a loading screen.
       PuzzleToy.loadLevel( %levelToLoad, true );
    }
@@ -83,7 +156,7 @@ function PuzzleToy::setLevelTime( %this, %value )
 function getLevelList()
 {
    // create the comma separated list   
-   %list = "level1_1,level1_2,level1_3,level1_4,mainMenu";
+   %list = "1-1,1-2,1-3,1-4,2-1,2-2,2-3,2-4,3-1,3-2,3-3,3-4,3-5,3-6,4-1,4-2,4-3,4-4,4-5,4-6,5-1,5-2,5-3,5-4,5-5,5-6,5-7,5-8,5-9,6-1,6-2,6-3,6-4,6-5,6-7,6-8,6-9,6-10,6-11,6-12,mainMenu";
    // return the created list
    return %list;
 }
@@ -92,16 +165,18 @@ function getLevelList()
 /// destroy function for this toy
 ///-----------------------------------------------------------------------------
 function PuzzleToy::destroy( %this )
-{
+{   
    // Before I do anything, I want to cancel any level load events so we don't 
    // try to load a level after destroying the toy.
    %this.cancelLoadEvents();
+      
+   // destroy my sandbox scene??
+   SandboxScene.delete();
    // Stop any sounds that are playing.
    alxStopAll();
    // Since I changed these, I am setting them back to their defaults
    SandboxWindow.setUseWindowInputEvents( true );
    SandboxWindow.setUseObjectInputEvents( false ); 
-   
 }
 
 ///-----------------------------------------------------------------------------
@@ -146,7 +221,11 @@ function loadLevel(%this)
 {
    // Any time we load a level we should stop any playing sounds.
    alxStopAll();   
-   
+   // if a gameboard exists, we need to clean it up
+   if (isObject(gBoard))
+   {
+      gBoard.cleanUp();
+   }
    // Set our scene by reading in the level file value stored in currentLevel
    setCustomScene(TamlRead(PuzzleToy.currentLevel));
    

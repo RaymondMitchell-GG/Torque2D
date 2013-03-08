@@ -15,7 +15,7 @@
    <Sprite		
       SceneLayer="0"
       size="60 15"
-      Position="0 15"
+      Position="0 20"
       CollisionSuppress="1" 
       UseInputEvents="1"
       Image="@asset=PuzzleToy:TitleBar"
@@ -24,12 +24,38 @@
       Class="startButton"
       SceneLayer="0"
       size="20 10"
-      Position="0 0"
+      Position="0 5"
       CollisionSuppress="1" 
       UseInputEvents="1"
       Image="@asset=PuzzleToy:PlayBtn"
+      upImage="PuzzleToy:PlayBtn"
+      downImage="PuzzleToy:PlayBtnDown"
       Frame="0"
       Name="bStartButton" />
+   <Sprite
+      Class="continueButton"
+      SceneLayer="0"
+      size="20 10"
+      Position="0 -5"
+      CollisionSuppress="1" 
+      UseInputEvents="1"
+      Image="@asset=PuzzleToy:PlayBtn"
+      upImage="PuzzleToy:PlayBtn"
+      downImage="PuzzleToy:PlayBtnDown"
+      Frame="0"
+      Name="bContinueButton" />
+   <Sprite
+      Class="galleryButton"
+      SceneLayer="0"
+      size="20 10"
+      Position="0 -15"
+      CollisionSuppress="1" 
+      UseInputEvents="1"
+      Image="@asset=PuzzleToy:SmallMenuBar"
+      upImage="PuzzleToy:SmallMenuBar"
+      downImage="PuzzleToy:SmallMenuBar"
+      Frame="0"
+      Name="bGalleryButton" />
    <Sprite
       class="soundButton"
       SceneLayer="1"

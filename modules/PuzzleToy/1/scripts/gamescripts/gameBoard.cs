@@ -1,8 +1,6 @@
 //---------------------------------------------------------------------------------------------
 // The Game Board
 //---------------------------------------------------------------------------------------------
-// Global constants can be placed in any scripts that are executed.  
-// I'm placing it here because it is specifically used for the gameBoard class.
 
 ///-----------------------------------------------------------------------------
 /// onAdd called when the object is added to a scene.
@@ -18,26 +16,54 @@ function gameBoard::onAddToScene(%this, %scenegraph)
    // What size should our pieces be
    %this.PieceSize = 7;
    // When a gameBoard is added to the scene, I want to make sure we know it hasn't yet been completed.   
-	%this.BoardComplete = false;	
+	%this.BoardComplete = false;
+	// The number of paint buckets we have available.
+	%this.BucketCount = 0;
+	// The number of bombs we have available
+	%this.BombCount = 0;	
+	// Move since break?
+	%this.BreakMove = false;
+	// How big is the chain
+	%this.BreakChain = 0;
 }
 
+///-----------------------------------------------------------------------------
+/// loadBoardObjects
+/// Loads the necessary objects for a gameboard
+///-----------------------------------------------------------------------------
 function gameBoard::loadBoardObjects(%this)
 {
+   // Here we load some objects that each board needs and add them to the scene 
+   // so the scene can handle rendering and cleanup.
    // The game piece
    TamlRead("^PuzzleToy/scriptobjects/gamepiece.sprite.taml").addToScene(SandboxScene);
+   // The bucket piece
+   TamlRead("^PuzzleToy/scriptobjects/bucketpiece.sprite.taml").addToScene(SandboxScene);
+   // The bomb piece
+   TamlRead("^PuzzleToy/scriptobjects/bombpiece.sprite.taml").addToScene(SandboxScene);
    // The break anim
-   TamlRead("^PuzzleToy/scriptobjects/breakpiece.sprite.taml").addToScene(SandboxScene);
-   // the canvas piece
-   TamlRead("^PuzzleToy/scriptobjects/canvaspiece.sprite.taml").addToScene(SandboxScene);
+   TamlRead("^PuzzleToy/scriptobjects/breakpiece.sprite.taml").addToScene(SandboxScene);   
    // The board composite sprite
    TamlRead("^PuzzleToy/scriptobjects/boardImage.csprite.taml").addToScene(SandboxScene);
-   
    // The canvas composite sprite
    TamlRead("^PuzzleToy/scriptobjects/boardCanvas.csprite.taml").addToScene(SandboxScene);   
    // The time bar pieces, front and back.
    TamlRead("^PuzzleToy/scriptobjects/boardTimefront.sprite.taml").addToScene(SandboxScene);   
    TamlRead("^PuzzleToy/scriptobjects/boardTimeback.sprite.taml").addToScene(SandboxScene);
    
+}
+
+function gameBoard::cleanUp(%this)
+{
+   // make sure we don't update anymore.
+   %this.BoardComplete = true;
+   // clear the board
+   %this.clearBoard();
+   // delete our templates.
+   pFront.delete();
+   pBreak.delete();
+   pBomb.delete();
+   pBucket.delete();   
 }
 
 ///-----------------------------------------------------------------------------
@@ -80,8 +106,8 @@ function gameBoard::initialize(%this, %xcellcount, %ycellcount, %colorcount)
    // get this boards position so we don't rely on it being in a specific place.
    %position = %this.getPosition();
    // Store the X and Y value of this position by getting the first and second word from the full vector2d
-   %positionX = getWord(%position, 0);
-   %positionY = getWord(%position, 1);
+   %positionX = %position.x;
+   %positionY = %position.y;
    // What is half the size of this gameBoard
    %halfX = %this.getSizeX()/2;
    %halfY = %this.getSizeY()/2;
@@ -97,7 +123,11 @@ function gameBoard::initialize(%this, %xcellcount, %ycellcount, %colorcount)
    // Here we will get the levels board data.  We can do that by loading stored data or just make random
    // data.  I don't have any data to load, so I will just create some random data
    // I made a function for this that I use below.
-   %this.BoardData = gameBoard::createBoardData(%xcellcount, %ycellcount, %colorcount);
+   // %this.BoardData = gameBoard::createBoardData(%xcellcount, %ycellcount, %colorcount - 2);
+   // Load my board data from my previously created binary baml files.
+   %this.LoadBoard(PuzzleToy.currentBoard);
+   // set the complete image
+   bCompleteImage.setImage(%this.CompleteImage);
    // Here I need to populate the canvas and game board CompositeSprite objects based on my board data
    // In order to do this, I iterate through all the possible positions on my gameboard.
    // I'm using the cell count variables I stored earlier.   
@@ -105,6 +135,9 @@ function gameBoard::initialize(%this, %xcellcount, %ycellcount, %colorcount)
    {
       for (%iy = 0; %iy < %this.cellCountY; %iy++)
       {
+         // What is the color for this location
+         %colorNumber = getWord(%this.BoardData, %ix + (%iy * %this.cellCountX));
+         %canvasColor = %this.getBlendFromColor(%colorNumber);
          // For simplicity, I added the bCanvas object to my level taml so I don't need to create one, I just populate
          // it with sprites.
          // Add a sprite at the logical location.
@@ -115,8 +148,8 @@ function gameBoard::initialize(%this, %xcellcount, %ycellcount, %colorcount)
          bCanvas.setSpriteImage("PuzzleToy:CanvasTexture");
          // And since I want the piece to be colored based on my board data, I set the blend color of the sprite
          // here.  The board data is essentially a long space separated string list.  I use getWord(%var, int) to get the data
-         // from the desired word in this list.
-         bCanvas.setSpriteBlendColor(%this.getBlendFromColor(getWord(%this.BoardData, %ix + (%iy * %this.cellCountX))));         
+         // from the desired word in this list.        
+         bCanvas.setSpriteBlendColor(%canvasColor);
          // I set up a special function (getBlendFromColor()) to get the blend color from the color enum in board data.
          // Sometimes it makes sense if you know you will need to perform the same actions in multiple locations,
          // to create a function for it.  Then you can use the function in place of rewriting all that script.
@@ -124,12 +157,47 @@ function gameBoard::initialize(%this, %xcellcount, %ycellcount, %colorcount)
          // Behind the canvas will be an image that mirrors the colors of the canvas, so I will also add sprites to bBoardImage
          // in the same way.
          bBoardImage.addSprite(%ix SPC %iy);
-         bBoardImage.setSpriteImage("PuzzleToy:WhiteBackdrop");
-         bBoardImage.setSpriteBlendColor(%this.getBlendFromColor(getWord(%this.BoardData, %ix + (%iy * %this.cellCountX))));
+         bBoardImage.setSpriteImage("PuzzleToy:WhiteBackdrop");         
+         bBoardImage.setSpriteBlendColor(%canvasColor);
          
          // I want to keep track of the canvas states, so I'm storing an array of booleans to let me know which canvas pieces 
          // still need to be "Painted". This is how I will check to see if the level has been completed later.
-         %this.canvasPieces[%ix, %iy] = true;
+         // create the color data for this canvas square
+         %colorData = new ScriptObject();
+         // set all the values to 0
+         %colorData.Black = 0;
+         %colorData.White = 0;
+         %colorData.Red = 0;
+         %colorData.Yellow = 0;
+         %colorData.Blue = 0;
+         %colorData.baseColor = %colorNumber;
+         %colorData.currentColor = %colorNumber;
+         // Set the values based on the color of this canvas square.
+         switch$(%colorNumber)
+         {
+            case "0":
+            %colorData.Black = 1;            
+            case "1":
+            %colorData.White = 1;            
+            case "2":
+            %colorData.Red = 1;
+            case "3":
+            %colorData.Blue = 1;
+            case "4":
+            %colorData.Yellow = 1;
+            case "5":
+            %colorData.Yellow = 1;
+            %colorData.Blue = 1;
+            case "6":
+            %colorData.Red = 1;
+            %colorData.Yellow = 1;
+            case "7":
+            %colorData.Blue = 1;
+            %colorData.Red = 1;
+            default:
+            %colorData.Black = 1;
+         }
+         %this.canvasPieces[%ix, %iy] = %colorData;
                   
          // When I fill the board with pieces I check to see that there isn't a piece in each location.  So I default each
          // locatin to a false value so I know it will register false when checked.
@@ -202,8 +270,8 @@ function gameBoard::getBlendFromColor(%this, %newcolor)
    {
       case "White":
          %blendColor = "1.0 1.0 1.0 1.0";      
-      case "Black":
-         %blendColor = "0.2 0.2 0.2 1.0";      
+      case "Gray":
+         %blendColor = "0.5 0.5 0.5 1.0";      
       case "Red":
          %blendColor = "1.0 0.0 0.0 1.0";
       case "Blue":
@@ -291,16 +359,46 @@ function gameBoard::onUpdate(%this)
          // See if we get a mach and need to break pieces
          %this.getBreaks(%this.checkSet.getObject(0));      
       }
+      // clear the check list
+      %this.CheckList.clear();
+      
+      // If 5 or more would break, we get a bucket
+      if (%this.breaklist.getCount() >= 5)
+      {
+         %this.BucketCount += 1;
+      }
       // Once we've checked the pieces we need to, check if we have enough pieces in the list
       if (%this.breaklist.getCount() >=3)
       {
          // Break all the pieces in the break list.
-         for (%i = 0; %i < %this.breaklist.getCount(); %i++)
+         while (%this.breaklist.getCount() > 0)
          {
-            %this.BreakPiece(%this.breaklist.getObject(%i));         
+            %piecetobreak = %this.breaklist.getObject(0);
+            %this.BreakPiece(%piecetobreak);
+            %this.breaklist.remove(%piecetobreak);                        
          }
+                  
          // clear out the break list.
          %this.breaklist.clear();
+         // If we havent moved since the last break, chain this one.
+         if (!%this.BreakMove)
+         {
+            %this.BreakChain += 1;
+         }
+         else
+         {
+            // Set break move to false so we know we haven't moved since this break.
+            %this.BreakMove = false;
+            %this.BreakChain = 1;
+         }                  
+      }
+      else if(%this.BreakChain > 1)
+      {         
+         // Add to intuition bombs based on chain.
+         if (%this.BreakChain >= 3)
+            %this.BombCount += 1;            
+         
+         %this.BreakChain = 0;
       }
    }   
    // Check if we are out of time, if we aren't, increment our time counter.
@@ -346,7 +444,7 @@ function gameBoard::setSelectedPiece(%this, %gamepiece)
    if (%this.bPieceSelected)
    {
       // Is the selected piece the same as this piece otherwise, is either this 
-      // or the selected piece moving?
+      // or the selected piece moving?      
       if (%this.selectedPiece == %gamepiece )
       {
          // If so, set it to not selected
@@ -401,7 +499,118 @@ function gameBoard::setSelectedPiece(%this, %gamepiece)
             %gamepiece.bCheckBreaks = true; 
             // if sound is enabled, play the move sound.
             if (PuzzleToy.soundEnabled)
-               alxPlay("PuzzleToy:MoveSound");        
+               alxPlay("PuzzleToy:MoveSound");
+               
+            // Update that we moved since the last break
+            %this.BreakMove = true;
+         }
+         
+      }
+      // set selected to false since we are done either way
+      %this.selectedPiece.setSelected(false);
+      // No matter what happened, there is not a piece selected.      
+      %this.bPieceSelected = false;
+   }
+   else if(!%gamepiece.bMoving)
+   {
+      // No piece was selected, so %gamepiece is now the selected piece
+      %this.selectedPiece = %gamepiece;
+      // let the piece know it's selected.
+      %gamepiece.setSelected(true);
+      // Change the flag so we know we have a piece selected.
+      %this.bPieceSelected = true;
+      // If sound is enabled play the select sound.
+      if (PuzzleToy.soundEnabled)
+         alxPlay("PuzzleToy:SelectSound");
+   }
+}
+
+///-----------------------------------------------------------------------------
+/// Set the selected piece to the supplied piece
+/// param - %gamepiece - game piece to set as selected.
+///-----------------------------------------------------------------------------
+function gameBoard::setSelectedLocation(%this, %locationx, %locationy)
+{
+   %gamepiece = %this.gamePieces[%locationx, %locationy];
+   // Do we have a piece selected already otherwise make sure this piece isn't moving
+   if (%this.bPieceSelected)
+   {
+      // Is the selected piece the same as this piece otherwise, is either this 
+      // or the selected piece moving?
+      if (!%gamepiece)
+      {
+         %this.movePiece(%this.selectedPiece, %locationx, %locationy);         
+         // Update the selected pieces location            
+         %this.selectedPiece.updateTargetLocation();
+         // Flag the selected piece for checkbreaks.
+         %this.selectedPiece.bCheckBreaks = true;          
+         // if sound is enabled, play the move sound.
+         if (PuzzleToy.soundEnabled)
+            alxPlay("PuzzleToy:MoveSound");
+              
+         %this.clearSelected();
+         
+         return;
+         
+      }
+      else if (%this.selectedPiece == %gamepiece )
+      {
+         // If so, set it to not selected
+         %gamepiece.setSelected(false);
+         // update bPieceSelected so we know we don't have a piece selected
+         %this.bPieceSelected = false;
+         // Return so we don't do any of the logic below.
+         return;
+      }
+      else if (%gamepiece.bMoving || %this.selectedPiece.bMoving)
+      {
+         // If either piece is moving, unselect both pieces.
+         %this.selectedPiece.setSelected(false);
+         %gamepiece.setSelected(false);
+         // update bPieceSelected so we know we don't have a piece selected
+         %this.bPieceSelected = false;
+         // return so we don't do any of the logic below
+         return;
+      }
+      // Calculate how many spaces the two pieces are away from each other.
+      %valueX = mAbs(%this.selectedPiece.locationX - %gamepiece.locationX);
+      %valueY = mAbs(%this.selectedPiece.locationY - %gamepiece.locationY);
+      
+      // make sure we are only 1 space away in only one direction.      
+      if ((%valueX <= 1 && %valueY <= 1) && (%valueX != %valueY))
+      {
+         // swap the pieces
+         %this.swapPieces(%this.selectedPiece, %gamepiece);
+         // Check each piece in it's new location to see if it will break
+         %bSelectedMove = %this.checkForMoves(%this.selectedPiece);
+         %bGelPieceMove = %this.checkForMoves(%gamepiece);
+         // Check that at least one will break
+         if (!%bSelectedMove && !%bGelPieceMove)
+         {
+            // If neither break, this is an invalid move, move the pieces back.
+            %this.swapPieces(%this.selectedPiece, %gamepiece);
+            //If sound is enabled, play the bad move sound
+            if (PuzzleToy.soundEnabled)
+               alxPlay("PuzzleToy:BadMoveSound");
+         }
+         else
+         {
+            // Otherwise we can move so we should update our locations and set them
+            // to check for breaks on their next update.
+            // Update the selected pieces location            
+            %this.selectedPiece.updateTargetLocation();
+            // Flag the selected piece for checkbreaks.
+            %this.selectedPiece.bCheckBreaks = true;         
+            // Update the %gamepiece
+            %gamepiece.updateTargetLocation();
+            // Flag the %gamepiece for checkbreaks.
+            %gamepiece.bCheckBreaks = true; 
+            // if sound is enabled, play the move sound.
+            if (PuzzleToy.soundEnabled)
+               alxPlay("PuzzleToy:MoveSound");
+               
+            // Update that we moved since the last break
+            %this.BreakMove = true;
          }
          
       }
@@ -454,6 +663,32 @@ function gameBoard::swapPieces(%this, %pieceone, %piecetwo)
    %piecetwo.setSceneLayer(2);
 }
 
+///-----------------------------------------------------------------------------
+/// Move gamepiece to board the location provided.
+/// param %pieceone - gamepiece
+/// param %piecetwo - gamepiece
+///-----------------------------------------------------------------------------
+function gameBoard::movePiece(%this, %gamepiece, %newx, %newy)
+{      
+   // Store our locationX and Y values in preparation for the swap
+   %locationOneX = %gamepiece.locationX;
+   %locationOneY = %gamepiece.locationY;
+            
+   // Store the pieces in their new location in the array   
+   %this.gamePieces[%newx, %newy] = %gamepiece;
+   %this.gamePieces[%locationOneX, %locationOneY] = false;
+   // Update the locationX and Y on each piece to reflect their new positions
+   %gamepiece.locationX = %newx;
+   %gamepiece.locationY = %newy; 
+   
+   // if there is a piece above this one, let it know to update
+   if ( %locationY < %this.cellCountY - 1 && %this.gamePieces[%locationOneX, %locationOneY + 1])  
+   {
+      %this.gamePieces[%locationOneX, %locationOneY + 1].bUpdate = true;
+   }
+      
+   
+}
 ///-----------------------------------------------------------------------------
 /// Check the piece for potential matches
 /// param %gamepiece - gamePiece
@@ -678,11 +913,14 @@ function gameBoard::getBreaks(%this, %gamepiece)
    }
    // Check if we have enough pieces to break
    if (%this.tempBreakList.getCount() >= 2)
-   {
+   {      
       // Iterate through our tempBreakList and add pieces to full break list
       for (%i = 0; %i < %this.tempBreakList.getCount(); %i++)
       {
-         %this.breakList.add(%this.tempBreakList.getObject(%i));         
+         // set the game piece to breaking
+         %this.tempBreakList.getObject(%i).bBreaking = true;
+         // and add to the break list
+         %this.breakList.add(%this.tempBreakList.getObject(%i));                 
       }      
       // We got a match, add the checked piece to the break list.
       %this.breaklist.add(%gamepiece);      
@@ -708,16 +946,102 @@ function gameBoard::BreakPiece(%this, %gamepiece)
    }   
    // Get the state of the canvas at the same location. true means it needs to be painted
    %canvasPieceState = %this.canvasPieces[%gamepiece.locationX, %gamepiece.locationY];
-   // Check if the canvas needs to be painted and the canvas below is the same color as this piece
-   if (%canvasPieceState && %gamepiece.color == getWord(%this.BoardData, %gamepiece.locationX + (%gamepiece.locationY * %this.cellCountX)))
-   {         
-      // If this checks out, set the canvas piece state to false in our array.
-      %this.canvasPieces[%gamepiece.locationX, %gamepiece.locationY] = false;
-      // Now we need to update the canvas composite sprite to match
-      // Select the sprite at this location.
-      bCanvas.selectSprite(%gamepiece.locationX SPC %gamepiece.locationY);
-      // Now change the sprites alpha so it isn't visible
-      bCanvas.setSpriteBlendAlpha(0.0);           
+   // Branch off depending on the piece type.
+   if (%gamepiece.PieceType $= "default")
+   {      
+      // The canvas is painted
+      if ( %this.paintCanvas(%gamepiece.color, %canvasPieceState)) //%canvasPieceState && %gamepiece.color == getWord(%this.BoardData, %gamepiece.locationX + (%gamepiece.locationY * %this.cellCountX)))
+      {
+         // Check if this canvas is completed?
+         if (%canvasPieceState.currentColor >= 0)
+         {
+            // If it still needs paint, we need to change it's color. set it's new color
+            bCanvas.selectSprite(%gamepiece.locationX SPC %gamepiece.locationY);
+            bCanvas.setSpriteBlendColor(%this.getBlendFromColor(%canvasPieceState.currentColor));
+         }
+         else
+         {
+            // If this checks out, set the canvas piece state to false in our array.
+            // %this.canvasPieces[%gamepiece.locationX, %gamepiece.locationY] = false;
+            // Now we need to update the canvas composite sprite to match
+            // Select the sprite at this location.
+            bCanvas.selectSprite(%gamepiece.locationX SPC %gamepiece.locationY);
+            // Now change the sprites alpha so it isn't visible
+            bCanvas.setSpriteBlendAlpha(0.0); 
+         }
+      }
+   }
+   else if (%gamepiece.PieceType $= "bucket")
+   {
+      // get the current color of the canvas behind the bucket.
+      %canvascolor = %canvasPieceState.currentColor;
+      // Check if the canvas needs to be painted
+      if (%this.paintCanvas(%canvasPieceState.currentColor, %canvasPieceState))
+      {
+         // Call bucket fill to paint any connecting canvas pieces that share the same color.
+         %this.bucketFill(%canvascolor, %gamepiece.locationX, %gamepiece.locationY);
+      }
+   }
+   else if (%gamepiece.PieceType $= "bomb")
+   {
+      // Check if the canvas needs to be painted and the canvas below is the same 
+      // color as this piece in a pattern around the bomb.
+      for (%ix = -1; %ix < 2; %ix++)
+      {
+         for (%iy = -1; %iy < 2; %iy++)
+         {
+            %tempX = %gamepiece.locationX + %ix;
+            %tempY = %gamepiece.locationY + %iy;
+            if (%tempX >= 0 && %tempY >= 0 && %tempX < %this.cellCountX && %tempY < %this.cellCountY)
+            {
+               // get a handle on the piece in question
+               %temppiece = %this.gamePieces[%tempX, %tempY];
+               %tempcanvas = %this.canvasPieces[%tempX, %tempY];
+               if (%this.paintCanvas(%gamepiece.color, %tempcanvas)) // %tempcanvas && %gamepiece.color == getWord(%this.BoardData, %tempX + (%tempY * %this.cellCountX)))
+               {
+                  // %this.canvasPieces[%tempX, %tempY] = false;
+                  // Now we need to update the canvas composite sprite to match
+                  // Select the sprite at this location.
+                  if (%tempcanvas.currentColor >= 0)
+                  {
+                     // If it still needs paint, we need to change it's color. set it's new color
+                     bCanvas.selectSprite(%tempX SPC %tempY);
+                     bCanvas.setSpriteBlendColor(%this.getBlendFromColor(%canvasPieceState.currentColor));
+                  }
+                  else
+                  {
+                     bCanvas.selectSprite(%tempX SPC %tempY);
+                     // Now change the sprites alpha so it isn't visible
+                     bCanvas.setSpriteBlendAlpha(0.0);
+                  }
+                                  
+               }
+               // If the gamepiece at this location isn't already breaking, breakit.
+               if(%temppiece && !%temppiece.bBreaking && %gamepiece !$= %temppiece)
+               {
+                  echo("Bomb Location = " @ %gamepiece.locationX @ " " @ %gamepiece.locationY);
+                  echo("the location = " @ %tempX @ " " @ %tempY);
+                  %temppiece.bBreaking = true;
+                  %this.BreakPiece(%temppiece);
+                  
+               } 
+            }
+         }
+      }
+      // break all the pieces around the bomb as well.
+      
+   }
+   else if (%gamepiece.PieceType $= "eraser")
+   {
+      // If the canvas is painted already, we should unpaint it.
+      if (!%canvasPieceState)
+      {
+         %this.canvasPieces[%gamepiece.locationX, %gamepiece.locationY] = true;
+         bCanvas.selectSprite(%gamepiece.locationX SPC %gamepiece.locationY);
+         // Now change the sprites alpha so it is Visible
+         bCanvas.setSpriteBlendAlpha(1.0);
+      }
+         
    }
    // Here we clone the break anim sprite object called pBreak
    // Store the clone  so we can change initialize it.
@@ -735,7 +1059,14 @@ function gameBoard::BreakPiece(%this, %gamepiece)
    // Use our custom function to set the blend color
    %this.setObjectBlendColor(%breakanim, %alpha);
    // Our template piece may not be sized correctly, set it to the correct size.
-   %breakanim.setSize(%this.PieceSize, %this.PieceSize);
+   if (%gamepiece.PieceType !$= "bomb")
+   {
+      %breakanim.setSize(%this.PieceSize, %this.PieceSize);
+   }
+   else
+   {
+      %breakanim.setSize(%this.PieceSize * 3, %this.PieceSize * 3);
+   }
    // When you clone an object, it clones it's position, so we need to set it's position.
    // Calculate it's position based on location   
    %destX = (%this.startLocationX + (%gamepiece.locationX * %this.PieceSize));
@@ -775,11 +1106,65 @@ function gameBoard::BreakPiece(%this, %gamepiece)
       }
    } 
    // In order to clean up the piece, we need to remove it from the scene.   
-   %gamepiece.removeFromScene();   
+   %gamepiece.setLifetime(0.01);   
+   // %gamepiece.removeFromScene();
+   
    // If sound is enabled play the break sound.
    if (PuzzleToy.soundEnabled)
       alxPlay("PuzzleToy:BreakSound"); 
 }
+///-----------------------------------------------------------------------------
+/// Paint the canvas at the provided spot and check around to see if it needs
+/// Paint More.
+///-----------------------------------------------------------------------------
+function gameBoard::bucketFill(%this, %ccolor, %locationx, %locationy)
+{
+   // Get the color of the canvas below the bucket.
+   // %ccolor = getWord(%this.BoardData, %locationx + (%locationy * %this.cellCountX));
+   
+   // doesn't need any more paint so set alpha to 0
+   bCanvas.selectSprite(%locationx SPC %locationy);      
+   bCanvas.setSpriteBlendAlpha(0.0);
+   
+   // Check the pieces on each side. If they are the valid and the same color then bucket fill.
+   if (%locationx > 0 && %this.canvasPieces[%locationx - 1, %locationy])
+   {
+      %tcolor = %this.canvasPieces[%locationx - 1, %locationy];
+      if (%this.paintCanvas(%ccolor, %tcolor))
+         %this.bucketFill(%ccolor, %locationx - 1, %locationy);
+      // %tcolor = getWord(%this.BoardData, %locationx - 1 + (%locationy * %this.cellCountX));
+      // if (%ccolor == %tcolor)
+         // %this.bucketFill(%locationx -1, %locationy);
+   }
+   if (%locationx < %this.cellCountX - 1 && %this.canvasPieces[%locationx + 1, %locationy])
+   {
+      %tcolor = %this.canvasPieces[%locationx + 1, %locationy];
+      if (%this.paintCanvas(%ccolor, %tcolor))
+         %this.bucketFill(%ccolor, %locationx + 1, %locationy);
+      // %tcolor = getWord(%this.BoardData, %locationx + 1 + (%locationy * %this.cellCountX));
+      // if (%ccolor == %tcolor)
+         // %this.bucketFill(%locationx + 1, %locationy);
+   }
+   if (%locationy > 0 && %this.canvasPieces[%locationx, %locationy -1])
+   {
+      %tcolor = %this.canvasPieces[%locationx, %locationy - 1];
+      if (%this.paintCanvas(%ccolor, %tcolor))
+         %this.bucketFill(%ccolor, %locationx, %locationy - 1);
+      // %tcolor = getWord(%this.BoardData, %locationx + ((%locationy - 1) * %this.cellCountX));
+      // if (%ccolor == %tcolor)
+         // %this.bucketFill(%locationx, %locationy - 1);
+   }
+   if (%locationy < %this.cellCountY -1 && %this.canvasPieces[%locationx, %locationy + 1])
+   {
+      %tcolor = %this.canvasPieces[%locationx, %locationy + 1];
+      if (%this.paintCanvas(%ccolor, %tcolor))
+         %this.bucketFill(%ccolor, %locationx, %locationy + 1);
+      // %tcolor = getWord(%this.BoardData, %locationx + ((%locationy + 1) * %this.cellCountX));
+      // if (%ccolor == %tcolor)
+         // %this.bucketFill(%locationx, %locationy + 1);
+   }
+}
+
 ///-----------------------------------------------------------------------------
 /// Check the top row for empty slots and fill them
 /// This is how we keep the board full.
@@ -793,17 +1178,18 @@ function gameBoard::topFill(%this)
    {
       // Check if there is a piece at the top in this row.
       if(%this.gamePieces[%i, %this.cellCountY - 1] == false)
-      {                        
+      {
          // There isn't, so we need to create a new piece                  
-         // clone  a new piece from our template pFront         
-         %newpiece = pFront.clone(true);
+         // get the next piece type. 
+         %newpiece = %this.getNextPiece();        
+         // %newpiece = pFront.clone(true);
          
          // Start it as invisible so we don't see it moving to it's starting
          // location.
          %newpiece.isVisible = false;
          // Piece will need to move to it's starting location, so set as moving.
          %newpiece.bMoving = true;         
-         // Associate this gameboard witht he game piece.
+         // Associate this gameboard with the game piece.
          %newpiece.setGameBoard(%this);         
          // Assign this piece to this location in the game piece array.
          %this.gamePieces[%i, %this.cellCountY - 1] = %newpiece;
@@ -825,6 +1211,37 @@ function gameBoard::topFill(%this)
          %this.isFilling = true;
       }
    }
+}
+///-----------------------------------------------------------------------------
+/// Create and return the next piece to spawn.
+/// Decides what type of piece to spawn and creates a new instance.
+///-----------------------------------------------------------------------------
+function gameBoard::getNextPiece(%this)
+{   
+   %temppiece = false;
+   while (!%temppiece)
+   {
+      %pnum = getRandom(10);
+      
+      switch$(%pnum)
+      {
+         case 0:
+         if (%this.BucketCount > 0)
+         {
+            %temppiece = pBucket.clone(true);
+            %this.BucketCount -= 1;
+         }    
+         case 1:
+         if (%this.BombCount > 0)
+         {
+            %temppiece = pBomb.clone(true);
+            %this.BombCount -= 1;
+         }
+         default:
+         %temppiece = pFront.clone(true);
+      }  
+   }
+   return %temppiece;
 }
 
 ///-----------------------------------------------------------------------------
@@ -895,7 +1312,7 @@ function gameBoard::checkDone(%this)
       for (%iy = 0; %iy < %this.cellCountY; %iy++)
       {
          // If any of these are true meaning visible, then we arent' done, so return.
-         if (%this.canvasPieces[%ix, %iy])
+         if (%this.canvasPieces[%ix, %iy].currentColor >= 0)
             return;
       }
    }
@@ -943,7 +1360,12 @@ function gameBoard::clearBoard(%this)
       {
          // If a piece exists, set it's visibility
          if (%this.gamePieces[%ix, %iy])
+         {
             %this.gamePieces[%ix, %iy].setVisible(false);                  
+            // set all the pieces to false
+            %this.gamePieces[%ix, %iy] = false;
+         }
+            
       }
    }
    // If the board is comlete, then all the canvas sprites should be invisible, 
@@ -958,29 +1380,20 @@ function gameBoard::clearBoard(%this)
 /// I intend to change this to data files that I can load but I just wanted to
 /// get it working for now. 
 ///---------------------------------------------------------------------------------------------
-function gameBoard::LoadBoard(%level)
-{
-   %boarddata = "";   
-   switch$(%level)
-   {
-      case "1-1":
-      // do stuff
-      %boarddata = "0 0 4 4 4 0 4 4 0 0 4 4 0 0 4 4 0 0 4 4 4 4 4 4 0 0 0 4 4 4 4 4 0 0 0 4 4 4 4 4 0 0 0 4 4 4 4 4 0 0 0 4 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 0 4 4 4 0 0 0 0 0 0 0 0";      
-      case "1-2":
-      // do stuff
-      %boarddata = "4 4 4 4 4 0 0 0 0 0 4 4 4 0 0 0 0 4 4 4 4 0 0 0 4 4 4 4 4 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 0 0 0 0 0 4 4 4 0 0 0 0 0 4 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0";      
-      case "1-3":
-      // do stuff
-      %boarddata = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 3 0 0 0 0 0 0 0 0 0 0 0 4 0 0 0 3 0 0 0 4 4 3 4 0 0 0 4 4 4 4 4 4";      
-      case "1-4":
-      // do stuff
-      %boarddata = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 0 0 0 0 0 0 0 4 4 0 0 0 0 0 0 4 4 4 0 0 0 0 0 4 4 4 3 0 0 0 0 4 4 4 0 0 0 0 0 4 4 4 4 0 0 0 0 4 4 4 4 4 0 0 0 4 4 4 4 4 0 0 0";      
-      default:
-      %boarddata = "0 0 4 4 4 0 4 4 0 0 4 4 0 0 4 4 0 0 4 4 4 4 4 4 0 0 0 4 4 4 4 4 0 0 0 4 4 4 4 4 0 0 0 4 4 4 4 4 0 0 0 4 4 4 4 4 0 0 0 0 4 4 4 4 0 0 0 0 0 4 4 4 0 0 0 0 0 0 0 0";      
-            
-   }
-   
-   return %boarddata;   
+function gameBoard::LoadBoard(%this, %level)
+{ 
+   %filename= "^PuzzleToy/scriptobjects/boards/" @ %level @ ".boarddata.baml"; 
+   // load the board data
+   %boarddata = TamlRead(%filename);
+   // set the gameBoards board data
+   %this.BoardData = %boarddata.data;
+   // set the value for the next level.
+   PuzzleToy.nextBoard = %boarddata.nextLevel;
+   // set the complete image.
+   %this.CompleteImage = %boarddata.CompleteImage;   
+   // set the level name text.
+   LevelText.setText("Level " @ PuzzleToy.currentBoard);   
+      
 }
 
 ///-----------------------------------------------------------------------------
@@ -995,9 +1408,93 @@ function gameBoard::createBoardData( %columns, %rows, %colors )
    %boarddata = "";
    for (%i=0; %i<%numberofpieces; %i++)
    {
-      %pcolor = getRandom(0, %colors - 1);
+      %pcolor = getRandom(0, %colors - 1) + 2;      
       %boarddata = %boarddata @ %pcolor @ " ";
    }
    
    return %boarddata;
+}
+
+function gameBoard::paintCanvas(%this, %color, %colordata)
+{   
+   // default our return variable to false
+   %painted = false;   
+   switch$(%color)
+   {
+      case "0":
+      if (%colordata.Black)
+      {
+         %painted = true;
+         %colordata.Black = 0;         
+      }
+      case "1":
+      if (%colordata.White)
+      {
+         %painted = true;
+         %colordata.White = 0;
+      }
+      case "2":
+      if (%colordata.Red)
+      {
+         %painted = true;
+         %colordata.Red = 0;
+      }
+      case "3":
+      if (%colordata.Blue)
+      {
+         %painted = true;
+         %colordata.Blue = 0;
+      }
+      case "4":
+      if (%colordata.Yellow)
+      {
+         %painted = true;
+         %colordata.Yellow = 0;
+      }
+      case "5":
+      if (%colordata.Yellow && %colordata.Blue)
+      {
+         %painted = true;
+         %colordata.Yellow = 0;
+         %colordata.Blue = 0;
+      }
+      case "6":
+      if (%colordata.Yellow && %colordata.Red)
+      {
+         %painted = true;
+         %colordata.Yellow = 0;
+         %colordata.Red = 0;
+      }
+      case "7":
+      if (%colordata.Red && %colordata.Blue)
+      {
+         %painted = true;
+         %colordata.Red = 0;
+         %colordata.Blue = 0;
+      }
+   }
+   // now we need to set it's currentColor   
+   %colorhash = %colordata.Black SPC %colordata.White SPC %colordata.Red SPC %colordata.Blue SPC %colordata.Yellow;
+   switch$(%colorhash)
+   {
+       case "1 0 0 0 0":
+       %colordata.currentColor = 0;
+       case "0 1 0 0 0":
+       %colordata.currentColor = 1;
+       case "0 0 1 0 0":
+       %colordata.currentColor = 2;
+       case "0 0 0 1 0":
+       %colordata.currentColor = 3;
+       case "0 0 0 0 1":
+       %colordata.currentColor = 4;
+       case "0 0 0 1 1":
+       %colordata.currentColor = 5;
+       case "0 0 1 0 1":
+       %colordata.currentColor = 6;
+       case "0 0 1 1 0":
+       %colordata.currentColor = 7;
+       case "0 0 0 0 0":
+       %colordata.currentColor = -1;       
+   }   
+   return %painted;
 }
