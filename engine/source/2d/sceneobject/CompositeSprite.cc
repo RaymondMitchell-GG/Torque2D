@@ -24,8 +24,8 @@
 #include "2d/sceneobject/CompositeSprite.h"
 #endif
 
-#ifndef _SPRITE_BATCH_ITEM_H_
-#include "2d/core/SpriteBatchItem.h"
+#ifndef _SPRITE_BATCH_QUERY_H_
+#include "2d/core/spriteBatchQuery.h"
 #endif
 
 #ifndef _RENDER_PROXY_H_
@@ -115,6 +115,29 @@ void CompositeSprite::initPersistFields()
     addProtectedField( "BatchCulling", TypeBool, Offset(mBatchCulling, CompositeSprite), &setBatchCulling, &defaultProtectedGetFn, &writeBatchCulling, "");
     addField( "BatchIsolated", TypeBool, Offset(mBatchIsolated, CompositeSprite), &writeBatchIsolated, "");
     addField( "BatchSortMode", TypeEnum, Offset(mBatchSortMode, CompositeSprite), &writeBatchSortMode, 1, &SceneRenderQueue::renderSortTable, "");
+}
+
+//-----------------------------------------------------------------------------
+
+bool CompositeSprite::onAdd()
+{
+    // Call parent.
+    if ( !Parent::onAdd() )
+        return false;
+
+    // Call sprite batch.
+    return SpriteBatch::onAdd();
+}
+
+//-----------------------------------------------------------------------------
+
+void CompositeSprite::onRemove()
+{
+    // Call sprite batch.
+    SpriteBatch::onRemove();
+
+    // Call parent.
+    Parent::onRemove();
 }
 
 //-----------------------------------------------------------------------------

@@ -39,6 +39,9 @@ PointForceController::PointForceController()
     mPosition.SetZero();
     mRadius = 1.0f;
     mForce = 0.0f;
+    mNonLinear = true;
+    mLinearDrag = 0.0f;
+    mAngularDrag = 0.0f;
 }
 
 //------------------------------------------------------------------------------
@@ -56,9 +59,12 @@ void PointForceController::initPersistFields()
     Parent::initPersistFields();
 
     // Force.
-    addProtectedField("Position", TypeVector2, Offset( mPosition, PointForceController), &defaultProtectedSetFn, &defaultProtectedGetFn, "The position of the attractor controller.");
-    addProtectedField("Radius", TypeF32, Offset( mRadius, PointForceController), &defaultProtectedSetFn, &defaultProtectedGetFn, "The radius of the attractor circle centered on the attractors position.");
-    addProtectedField("Force", TypeF32, Offset( mForce, PointForceController), &defaultProtectedSetFn, &defaultProtectedGetFn, "The force to apply to attact to the controller position.");
+    addField( "Position", TypeVector2, Offset( mPosition, PointForceController), "The position of the attractor controller.");
+    addField( "Radius", TypeF32, Offset( mRadius, PointForceController), "The radius of the attractor circle centered on the attractors position.");
+    addField( "Force", TypeF32, Offset( mForce, PointForceController), "The force to apply to attact to the controller position.");
+    addField( "NonLinear", TypeBool, Offset( mNonLinear, PointForceController), "Whether to apply the force non-linearly (using the inverse square law) or linearly.");
+    addField( "LinearDrag", TypeF32, Offset(mLinearDrag, PointForceController), "The linear drag co-efficient for the fluid." );
+    addField( "AngularDrag", TypeF32, Offset(mAngularDrag, PointForceController), "The angular drag co-efficient for the fluid." );
 }
 
 //------------------------------------------------------------------------------
@@ -80,6 +86,14 @@ void PointForceController::copyTo(SimObject* object)
 
 //------------------------------------------------------------------------------
 
+void PointForceController::setTrackedObject( SceneObject* pSceneObject )
+{
+    // Set tracked object.
+    mTrackedObject = pSceneObject;
+}
+
+//------------------------------------------------------------------------------
+
 void PointForceController::integrate( Scene* pScene, const F32 totalTime, const F32 elapsedTime, DebugStats* pDebugStats )
 {
     // Finish if the attractor would have no effect.
@@ -89,10 +103,13 @@ void PointForceController::integrate( Scene* pScene, const F32 totalTime, const 
     // Prepare query filter.
     WorldQuery* pWorldQuery = prepareQueryFilter( pScene );
 
+    // Fetch the current position.
+    const Vector2 currentPosition = getCurrentPosition();
+
     // Calculate the AABB of the attractor.
     b2AABB aabb;
-    aabb.lowerBound.Set( mPosition.x - mRadius, mPosition.y - mRadius );
-    aabb.upperBound.Set( mPosition.x + mRadius, mPosition.y + mRadius );
+    aabb.lowerBound.Set( currentPosition.x - mRadius, currentPosition.y - mRadius );
+    aabb.upperBound.Set( currentPosition.x + mRadius, currentPosition.y + mRadius );
 
     // Query for candidate objects.
     pWorldQuery->anyQueryArea( aabb ); 
@@ -100,28 +117,87 @@ void PointForceController::integrate( Scene* pScene, const F32 totalTime, const 
     // Fetch results.
     typeWorldQueryResultVector& queryResults = pWorldQuery->getQueryResults();
 
+    // Fetch result count.
+    const U32 resultCount = (U32)queryResults.size();
+
+    // Finish if nothing to process.
+    if ( resultCount == 0 )
+        return;
+
+    // Calculate the radius squared.
+    const F32 radiusSqr = mRadius * mRadius;
+
+    // Calculate the force squared in-case we need it.
+    const F32 forceSqr = mForce * mForce * (( mForce < 0.0f ) ? -1.0f : 1.0f);
+
+    // Calculate drag coefficients (time-integrated).
+    const F32 linearDrag = mClampF( mLinearDrag, 0.0f, 1.0f ) * elapsedTime;
+    const F32 angularDrag = mClampF( mAngularDrag, 0.0f, 1.0f ) * elapsedTime;
+
+    // Fetch the tracked object.
+    const SceneObject* pTrackedObject = mTrackedObject;
+
     // Iterate the results.
-    for ( U32 n = 0; n < (U32)queryResults.size(); n++ )
+    for ( U32 n = 0; n < resultCount; n++ )
     {
         // Fetch the scene object.
         SceneObject* pSceneObject = queryResults[n].mpSceneObject;
 
-        // Ignore if it's a static body.
-        if ( pSceneObject->getBodyType() == b2BodyType::b2_staticBody )
+        // Ignore if it's the tracked object.
+        if ( pSceneObject == pTrackedObject )
             continue;
 
-        // Calculate the force direction to the controllers position.
-        Vector2 forceDirection = mPosition - pSceneObject->getPosition();
+        // Ignore if it's a static body.
+        if ( pSceneObject->getBodyType() == b2_staticBody )
+            continue;
+
+        // Calculate the force distance to the controllers current position.
+        Vector2 distanceForce = currentPosition - pSceneObject->getPosition();
 
         // Skip if the position is outside the radius.
-        if ( forceDirection.Length() > mRadius )
+        if ( distanceForce.LengthSquared() > radiusSqr )
             continue;
 
-        // Normalize to the specified force.
-        forceDirection.Normalize( mForce );
+        // Non-Linear force?
+        if ( mNonLinear )
+        {
+            // Yes, so use an approximation of the inverse-square law.
+            distanceForce *= (1.0f / distanceForce.LengthSquared()) * forceSqr;
+        }
+        else
+        {
+            // No, so normalize to the specified force (linear).
+            distanceForce.Normalize( mForce );
+        }
 
         // Apply the force.
-        pSceneObject->applyForce( forceDirection, true );
+        pSceneObject->applyForce( distanceForce, true );
+
+        // Linear drag?
+        if ( linearDrag > 0.0f )
+        {
+            // Yes, so fetch linear velocity.
+            Vector2 linearVelocity = pSceneObject->getLinearVelocity();
+
+            // Calculate linear velocity change.
+            const Vector2 linearVelocityDelta = linearVelocity * linearDrag;
+
+            // Set linear velocity.
+            pSceneObject->setLinearVelocity( linearVelocity - linearVelocityDelta );
+        }
+
+        // Angular drag?
+        if ( angularDrag > 0.0f )
+        {
+            // Yes, so fetch angular velocity.
+            F32 angularVelocity = pSceneObject->getAngularVelocity();
+
+            // Calculate angular velocity change.
+            const F32 angularVelocityDelta = angularVelocity * angularDrag;
+
+            // Set angular velocity.
+            pSceneObject->setAngularVelocity( angularVelocity - angularVelocityDelta );
+        }
     }
 }
 
@@ -133,5 +209,5 @@ void PointForceController::renderOverlay( Scene* pScene, const SceneRenderState*
     Parent::renderOverlay( pScene, pSceneRenderState, pBatchRenderer );
 
     // Draw force radius.
-    pScene->mDebugDraw.DrawCircle( mPosition, mRadius, ColorF(1.0f, 1.0f, 0.0f ) );
+    pScene->mDebugDraw.DrawCircle( getCurrentPosition(), mRadius, ColorF(1.0f, 1.0f, 0.0f ) );
 }

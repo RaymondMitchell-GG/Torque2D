@@ -251,9 +251,11 @@
     <ClCompile Include="..\..\source\2d\core\SpriteBase.cc" />
     <ClCompile Include="..\..\source\2d\core\SpriteBatch.cc" />
     <ClCompile Include="..\..\source\2d\core\SpriteBatchItem.cc" />
+    <ClCompile Include="..\..\source\2d\core\SpriteBatchQuery.cc" />
     <ClCompile Include="..\..\source\2d\core\SpriteProxyBase.cc" />
     <ClCompile Include="..\..\source\2d\core\Utility.cc" />
     <ClCompile Include="..\..\source\2d\core\Vector2.cc" />
+    <ClCompile Include="..\..\source\2d\experimental\composites\WaveComposite.cc" />
     <ClCompile Include="..\..\source\2d\gui\guiImageButtonCtrl.cc" />
     <ClCompile Include="..\..\source\2d\gui\guiSceneObjectCtrl.cc" />
     <ClCompile Include="..\..\source\2d\gui\guiSpriteCtrl.cc" />
@@ -639,10 +641,14 @@
     <ClInclude Include="..\..\source\2d\core\SpriteBase_ScriptBinding.h" />
     <ClInclude Include="..\..\source\2d\core\SpriteBatch.h" />
     <ClInclude Include="..\..\source\2d\core\SpriteBatchItem.h" />
+    <ClInclude Include="..\..\source\2d\core\SpriteBatchQuery.h" />
+    <ClInclude Include="..\..\source\2d\core\SpriteBatchQueryResult.h" />
     <ClInclude Include="..\..\source\2d\core\SpriteProxyBase.h" />
     <ClInclude Include="..\..\source\2d\core\Utility.h" />
     <ClInclude Include="..\..\source\2d\core\Vector2.h" />
     <ClInclude Include="..\..\source\2d\core\Vector2_ScriptBinding.h" />
+    <ClInclude Include="..\..\source\2d\experimental\composites\WaveComposite.h" />
+    <ClInclude Include="..\..\source\2d\experimental\composites\WaveComposite_ScriptBinding.h" />
     <ClInclude Include="..\..\source\2d\gui\guiImageButtonCtrl.h" />
     <ClInclude Include="..\..\source\2d\gui\guiImageButtonCtrl_ScriptBindings.h" />
     <ClInclude Include="..\..\source\2d\gui\guiSceneObjectCtrl.h" />

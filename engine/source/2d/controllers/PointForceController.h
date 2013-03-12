@@ -38,9 +38,26 @@ class PointForceController : public PickingSceneController
 private:
     typedef PickingSceneController Parent;
 
+    /// Controller position.
     Vector2 mPosition;
+
+    /// Controller radius.
     F32 mRadius;
+
+    /// Controller force.
     F32 mForce;
+
+    /// Whether to apply the force non-linearly (using the inverse square law) or linearly.
+    bool mNonLinear;
+
+	/// Linear drag co-efficient.
+	F32 mLinearDrag;
+
+	/// Linear drag co-efficient.
+	F32 mAngularDrag;
+
+    /// Tracked object.
+    SimObjectPtr<SceneObject> mTrackedObject;
 
 public:
     PointForceController();
@@ -55,6 +72,22 @@ public:
     inline F32 getRadius( void ) const { return mRadius; }
     inline void setForce( const F32 force ) { mForce = force; }
     inline F32 getForce( void ) const { return mForce; }
+    inline void setNonLinear( const bool nonLinear ) { mNonLinear = nonLinear; }
+    inline bool getNonLinear( void ) const { return mNonLinear; }
+    inline void setLinearDrag( const F32 linearDrag ) { mLinearDrag = linearDrag; }
+    inline F32 getLinearDrag( void ) const { return mLinearDrag; }
+    inline void setAngularDrag( const F32 angularDrag ) { mAngularDrag = angularDrag; }
+    inline F32 getAngularDrag( void ) const { return mAngularDrag; }
+    void setTrackedObject( SceneObject* pSceneObject );
+    inline SceneObject* getTrackedObject( void ) { return mTrackedObject; }
+    inline Vector2 getCurrentPosition( void )
+    {
+        // Fetch the tracked object.
+        SceneObject* pSceneObject = mTrackedObject;
+
+        // Return the controller position if no tracked object else the tracked object position plus a tracked object local-space position.
+        return pSceneObject == NULL ? mPosition : b2Mul( pSceneObject->getTransform(), mPosition);
+    }
 
     /// Integration.
     virtual void integrate( Scene* pScene, const F32 totalTime, const F32 elapsedTime, DebugStats* pDebugStats );
