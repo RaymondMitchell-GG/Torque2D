@@ -38,7 +38,7 @@ function AppCore::create( %this )
     // Initialize audio
     initializeOpenAL();
     
-    ModuleDatabase.loadExplicit("Empty Project");
+    ModuleDatabase.loadExplicit("PixelPainter");
 }
 
 //-----------------------------------------------------------------------------

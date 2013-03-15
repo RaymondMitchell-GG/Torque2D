@@ -1,6 +1,6 @@
 
 
-function EmptyProject::create( %this )
+function PixelPainter::create( %this )
 {
     // Load project scripts here
     
@@ -10,7 +10,7 @@ function EmptyProject::create( %this )
 
 //-----------------------------------------------------------------------------
 
-function EmptyProject::destroy( %this )
+function PixelPainter::destroy( %this )
 {
 
 }

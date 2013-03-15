@@ -1,5 +1,5 @@
 <ModuleDefinition
-	ModuleId="EmptyProject"
+	ModuleId="PixelPainter"
 	VersionId="1"
 	Description="Empty Project Module"
 	ScriptFile="main.cs"
