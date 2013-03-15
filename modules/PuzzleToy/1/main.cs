@@ -32,6 +32,7 @@ function PuzzleToy::create( %this )
    exec("./scripts/gamescripts/galleryButton.cs");
    exec("./scripts/gamescripts/nextButton.cs");
    exec("./scripts/gamescripts/mainMenuButton.cs");
+   exec("./scripts/gamescripts/pauseButton.cs");
    exec("./scripts/gamescripts/timeBar.cs");
    exec("./scripts/gamescripts/nextLevelButton.cs");
    exec("./scripts/gamescripts/completeImage.cs");
@@ -256,6 +257,29 @@ function loadLevel(%this)
    SandboxWindow.setCameraPosition( 0, 0);
    SandboxWindow.setCameraSize( 160, 90 );
    SandboxWindow.setCameraZoom( 1 );
+   
+   
+}
+
+function TogglePauseScene()
+{
+   if (!isObject(PauseScene))
+   {
+      %pausescene = TamlRead("./levels/PauseScreen.scene.taml");      
+   }
+   
+   if (SandboxScene.getScenePause())
+   {
+      SandboxScene.setScenePause(false);
+      PuzzleToy.Paused = false;
+      SandboxWindow.setScene(SandboxScene);
+   }
+   else
+   {
+      SandboxScene.setScenePause(true);
+      PuzzleToy.Paused = true;
+      SandboxWindow.setScene(PauseScene);
+   }
    
    
 }
