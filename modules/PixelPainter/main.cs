@@ -42,7 +42,7 @@ function PixelPainter::create( %this )
    }
    // When we create the toy, we want to check for a save file.
    // set up our path and filename for save data.   
-   PixelPainter.savedirectory = getUserDataDirectory() @ "/puzzletoy";
+   PixelPainter.savedirectory = getUserDataDirectory() @ "/PixelPainter";
    PixelPainter.savepath = PixelPainter.savedirectory @ "/PixelPainter.savedata";
    // load user data
    PixelPainter.loadUserData();
