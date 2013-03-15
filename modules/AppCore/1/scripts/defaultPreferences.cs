@@ -21,8 +21,8 @@
 //-----------------------------------------------------------------------------
 
 /// Game
-$Game::CompanyName              = "GarageGames LLC";
-$Game::ProductName              = "Torque 2D";
+$Game::CompanyName              = "Ray Mitchell";
+$Game::ProductName              = "Pixel Painter";
 
 /// iOS
 $pref::iOS::ScreenOrientation   = $iOS::constant::Landscape;
