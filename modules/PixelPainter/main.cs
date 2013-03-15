@@ -28,6 +28,17 @@ function PixelPainter::create( %this )
    
    // First we need a scene window.  create it.
    createSceneWindow();
+   
+   // if this is a debug build enable the console
+   if (isDebugBuild())
+   {
+      // load the console script
+      exec("./scripts/console.cs");
+      // create the console and bind tilde to toggle it.
+      // Load and configure the console.      
+      PixelPainter.add( TamlRead("./gui/ConsoleDialog.gui.taml") );
+      GlobalActionMap.bind( keyboard, "ctrl tilde", toggleConsole );
+   }
    // When we create the toy, we want to check for a save file.
    // set up our path and filename for save data.   
    PixelPainter.savedirectory = getUserDataDirectory() @ "/puzzletoy";

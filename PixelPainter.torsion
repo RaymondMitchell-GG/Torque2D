@@ -15,6 +15,15 @@
 <InjectDebugger>true</InjectDebugger>
 <UseSetModPaths>false</UseSetModPaths>
 </Config>
+<Config>
+<Name>debug</Name>
+<Executable>Torque2D_DEBUG.exe</Executable>
+<Arguments/>
+<HasExports>true</HasExports>
+<Precompile>false</Precompile>
+<InjectDebugger>true</InjectDebugger>
+<UseSetModPaths>false</UseSetModPaths>
+</Config>
 </Configs>
 <SearchURL/>
 <SearchProduct>TTDMIT</SearchProduct>
