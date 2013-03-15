@@ -1,0 +1,39 @@
+<Scene
+   Name="PauseScene"
+   UseBackgroundColor="1"
+   BackgroundColor="InvisibleBlack" >
+   <Sprite
+      SceneLayer="31"
+      size="160 90"
+      BodyType="static"
+      Active="0"
+      Awake="0"
+      CollisionSuppress="1"
+      Image="@asset=PixelPainter:DarkOverlay"
+      Frame="0" />
+   <ImageFont
+      Image="@asset=PixelPainter:font"
+      Text="PAUSED"      
+      TextAlignment="Center"      
+      FontSize="3 3"
+      FontPadding="0"
+      Position="0 20" />
+   <Sprite
+      class="mainMenuButton"
+      SceneLayer="1"
+      size="20 10"
+      Position="0 -5"                
+      UseInputEvents="1"
+      Image="@asset=PixelPainter:MainMenuBtn"
+      upImage="PixelPainter:MainMenuBtn"
+      downImage="PixelPainter:MainMenuBtnDown" />
+   <Sprite
+      class="pauseButton"
+      SceneLayer="1"
+      size="20 10"
+      Position="0 10"                
+      UseInputEvents="1"
+      Image="@asset=PixelPainter:MainMenuBtn"
+      upImage="PixelPainter:MainMenuBtn"
+      downImage="PixelPainter:MainMenuBtnDown" />
+</Scene>

@@ -1,0 +1,8 @@
+<ImageAsset
+    AssetName="PaintBomb"
+    AssetCategory="sprites"
+	CellCountX="4"
+	CellCountY="2"
+	CellWidth="64"
+	CellHeight="64"
+    ImageFile="PaintBomb.png" />

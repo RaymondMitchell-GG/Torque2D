@@ -32,7 +32,7 @@ function AppCore::create( %this )
     initializeCanvas("Empty Project");
     
     // Set the canvas color
-    Canvas.BackgroundColor = "CornflowerBlue";
+    Canvas.BackgroundColor = "Black";
     Canvas.UseBackgroundColor = true;
     
     // Initialize audio

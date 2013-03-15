@@ -1,0 +1,5 @@
+<ScriptObject
+    CompleteImage="PixelPainter:Complete6-8"
+    data="0 0 0 0 0 0 0 0 2 0 0 0 0 0 0 0 2 2 0 0 0 0 0 0 0 0 0 0 0 0 2 0 0 0 0 0 0 6 2 0 0 5 0 0 2 2 0 1 0 0 0 0 1 0 1 5 2 0 0 0 0 0 1 0 2 0 2 0 0 0 0 0 2 1 2 2 0 0 5 0"
+    Level="6-8"
+    nextLevel="6-9" />

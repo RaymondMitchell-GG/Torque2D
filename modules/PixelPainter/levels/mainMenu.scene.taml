@@ -1,0 +1,72 @@
+<Scene
+   Name="MainMenu"	
+   UseBackgroundColor="1"
+   MusicAsset="PixelPainter:titleMusic"
+   BackgroundColor="InvisibleBlack">
+   <Sprite
+      SceneLayer="31"
+      size="160 90"
+      BodyType="static"
+      Active="0"
+      Awake="0"
+      CollisionSuppress="1"
+      Image="@asset=PixelPainter:TitleBackGround"
+      Frame="0" />
+   <Sprite		
+      SceneLayer="0"
+      size="60 15"
+      Position="0 20"
+      CollisionSuppress="1" 
+      UseInputEvents="1"
+      Image="@asset=PixelPainter:TitleBar"
+      Frame="0" />
+   <Sprite
+      Class="startButton"
+      SceneLayer="0"
+      size="20 10"
+      Position="0 5"
+      CollisionSuppress="1" 
+      UseInputEvents="1"
+      Image="@asset=PixelPainter:PlayBtn"
+      upImage="PixelPainter:PlayBtn"
+      downImage="PixelPainter:PlayBtnDown"
+      Frame="0"
+      Name="bStartButton" />
+   <Sprite
+      Class="continueButton"
+      SceneLayer="0"
+      size="20 10"
+      Position="0 -5"
+      CollisionSuppress="1" 
+      UseInputEvents="1"
+      Image="@asset=PixelPainter:PlayBtn"
+      upImage="PixelPainter:PlayBtn"
+      downImage="PixelPainter:PlayBtnDown"
+      Frame="0"
+      Name="bContinueButton" />
+   <Sprite
+      Class="galleryButton"
+      SceneLayer="0"
+      size="20 10"
+      Position="0 -15"
+      CollisionSuppress="1" 
+      UseInputEvents="1"
+      Image="@asset=PixelPainter:SmallMenuBar"
+      upImage="PixelPainter:SmallMenuBar"
+      downImage="PixelPainter:SmallMenuBar"
+      Frame="0"
+      Name="bGalleryButton" />
+   <Sprite
+      class="soundButton"
+      SceneLayer="1"
+      size="12 12"
+      Position="-65 -35"        
+      BlendColor="White"
+      UseInputEvents="1"
+      Image="@asset=PixelPainter:SmallMenuBar"
+      onImage="PixelPainter:SoundOn"
+      offImage="PixelPainter:SoundOff"
+      Frame="0"
+      bSoundEnabled="1"
+      Name="sButton" /> 
+</Scene>

@@ -1,0 +1,23 @@
+<TorsionProject>
+<Name>PixelPainter</Name>
+<WorkingDir/>
+<EntryScript>main.cs</EntryScript>
+<DebugHook>dbgSetParameters( #port#, "#password#", true );</DebugHook>
+<Mods/>
+<ScannerExts>cs; gui</ScannerExts>
+<Configs>
+<Config>
+<Name>Release</Name>
+<Executable>Torque2D.exe</Executable>
+<Arguments/>
+<HasExports>true</HasExports>
+<Precompile>false</Precompile>
+<InjectDebugger>true</InjectDebugger>
+<UseSetModPaths>false</UseSetModPaths>
+</Config>
+</Configs>
+<SearchURL/>
+<SearchProduct>TTDMIT</SearchProduct>
+<SearchVersion>HEAD</SearchVersion>
+<ExecModifiedScripts>true</ExecModifiedScripts>
+</TorsionProject>

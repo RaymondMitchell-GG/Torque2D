@@ -1,0 +1,4 @@
+<ImageAsset
+    AssetName="BoardGrid"
+    AssetCategory="sprites"
+    ImageFile="BoardGrid.png" />
