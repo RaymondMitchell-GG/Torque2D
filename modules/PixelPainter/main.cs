@@ -29,8 +29,9 @@ function PixelPainter::create( %this )
    // First we need a scene window.  create it.
    createSceneWindow();
    
+   %enabledebug = true; // isDebugBuild();
    // if this is a debug build enable the console
-   if (isDebugBuild())
+   if (%enabledebug)
    {
       // load the console script
       exec("./scripts/console.cs");
@@ -70,8 +71,7 @@ function PixelPainter::create( %this )
    // I moved all the script loading up the main menu and such in the reset function 
    // so I don't have to write it twice.
    // I call it here to start everything up
-   PixelPainter.reset();
-      
+   PixelPainter.reset();      
 }
 
 function PixelPainter::saveUserData(%this)
