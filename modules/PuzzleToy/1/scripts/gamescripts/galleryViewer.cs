@@ -7,6 +7,7 @@
 ///-----------------------------------------------------------------------------
 function galleryViewer::onAdd(%this)
 {      
+   %this.imageSize = "56 70";
    // iterate and load up images.
    for (%i = 1; %i <= PuzzleToy.NumberOfLevels; %i++)
    {  
@@ -37,16 +38,16 @@ function galleryViewer::onAdd(%this)
 ///-----------------------------------------------------------------------------
 function galleryViewer::initialize(%this)
 {
-   %startingx = (%this.selectedImage - 1) * (- %this.getSize().x * 0.5);
+   %startingx = (%this.selectedImage - 1) * (- %this.imageSize.x * 0.5);
    for (%i = 1; %i <= PuzzleToy.NumberOfLevels; %i++)
    {
       %sprite = %this.GallerySprites[%i];
-      %sprite.setPosition(%startingx + ((%i - 1) * (%this.getSize().x * 0.5)), %this.getPosition().y);
-      %sprite.setSize(%this.getSize().x * 0.5, %this.getSize().y * 0.5);
+      %sprite.setPosition(%startingx + ((%i - 1) * (%this.imageSize.x * 0.5)), %this.getPosition().y);
+      %sprite.setSize(%this.imageSize.x * 0.5, %this.imageSize.y * 0.5);
       %sprite.setSceneLayer(2);
    }
    %this.GallerySprites[%this.selectedImage].setSceneLayer(1);
-   %this.GallerySprites[%this.selectedImage].setSize(%this.getSize().x, %this.getSize().y);
+   %this.GallerySprites[%this.selectedImage].setSize(%this.imageSize.x, %this.imageSize.y);
 }
 
 ///-----------------------------------------------------------------------------
@@ -54,20 +55,23 @@ function galleryViewer::initialize(%this)
 ///-----------------------------------------------------------------------------
 function galleryViewer::updateSelected(%this)
 {
-   %startingx = (%this.selectedImage - 1) * (- %this.getSize().x * 0.5);
+   %startingx = (%this.selectedImage - 1) * (- %this.imageSize.x * 0.5);
    for (%i = 1; %i <= PuzzleToy.NumberOfLevels; %i++)
    {
       %sprite = %this.GallerySprites[%i];
-      %targetlocation = %startingx + ((%i - 1) * (%this.getSize().x * 0.5)) SPC %this.getPosition().y;
+      %targetlocation = %startingx + ((%i - 1) * (%this.imageSize.x * 0.5)) SPC %this.getPosition().y;
       %spritelocationx = %sprite.getPosition().x;
       %speed = mAbs(%spritelocationx - %targetlocation.x);
-      %sprite.moveTo(%targetlocation, %speed * 4, true, true);
+      %sprite.cancelMoveTo(true);                 
+      if (%speed > 0)
+         %sprite.moveTo(%targetlocation, %speed * 4, true, true);
+
       // %sprite.setPosition(%startingx + ((%i - 1) * (%this.getSize().x * 0.5)), %this.getPosition().y);      
-      %sprite.setSize(%this.getSize().x * 0.5, %this.getSize().y * 0.5);
+      %sprite.setSize(%this.imageSize.x * 0.5, %this.imageSize.y * 0.5);
       %sprite.setSceneLayer(5);
    }   
    %this.GallerySprites[%this.selectedImage].setSceneLayer(4);
-   %this.GallerySprites[%this.selectedImage].setSize(%this.getSize().x, %this.getSize().y);
+   %this.GallerySprites[%this.selectedImage].setSize(%this.imageSize.x, %this.imageSize.y);
 }
 
 ///-----------------------------------------------------------------------------
@@ -87,7 +91,7 @@ function galleryViewer::onTouchUp(%this, %modifier, %worldPosition, %clicks)
 {
    if (!%this.bDragged && %this.GallerySprites[%this.selectedImage].bUnLocked)
    {
-      echo("open image viewer");
+      echo("create an image viewer TBD");  
    }
 }
 
@@ -109,7 +113,7 @@ function galleryViewer::onTouchDragged(%this, %modifier, %worldPosition, %clicks
    %this.currentDelta = VectorAdd(%this.currentDelta, %delta);   
    
    // If our total delta is high enough in the X direction
-   if (mAbs(%this.currentDelta.x) > 10)
+   if (mAbs(%this.currentDelta.x) > 20)
    {
       %this.bDragged = true;
       // If the current delta is positive, select left, otherwise select right
@@ -119,8 +123,8 @@ function galleryViewer::onTouchDragged(%this, %modifier, %worldPosition, %clicks
          %this.selectedImage++;
          if (%this.selectedImage > PuzzleToy.NumberOfLevels)
             %this.selectedImage = PuzzleToy.NumberOfLevels;
-            
-         %this.updateSelected();         
+         else           
+            %this.updateSelected();         
       }
       else
       {
@@ -128,8 +132,8 @@ function galleryViewer::onTouchDragged(%this, %modifier, %worldPosition, %clicks
          %this.selectedImage--;
          if (%this.selectedImage < 1)
             %this.selectedImage = 1;
-            
-         %this.updateSelected();
+         else
+            %this.updateSelected();
       }
       // Now that we selected, reset the currentDeltas.
       %this.currentDelta = "0 0";
