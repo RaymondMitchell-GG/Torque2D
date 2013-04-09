@@ -112,7 +112,7 @@ void PointForceController::integrate( Scene* pScene, const F32 totalTime, const 
     aabb.upperBound.Set( currentPosition.x + mRadius, currentPosition.y + mRadius );
 
     // Query for candidate objects.
-    pWorldQuery->anyQueryArea( aabb ); 
+    pWorldQuery->anyQueryAABB( aabb ); 
 
     // Fetch results.
     typeWorldQueryResultVector& queryResults = pWorldQuery->getQueryResults();
@@ -154,15 +154,18 @@ void PointForceController::integrate( Scene* pScene, const F32 totalTime, const 
         // Calculate the force distance to the controllers current position.
         Vector2 distanceForce = currentPosition - pSceneObject->getPosition();
 
-        // Skip if the position is outside the radius.
-        if ( distanceForce.LengthSquared() > radiusSqr )
+        // Fetch distance squared.
+        const F32 distanceSqr = distanceForce.LengthSquared();
+
+        // Skip if the position is outside the radius or is centered on the controller.
+        if ( distanceSqr > radiusSqr || distanceSqr < FLT_EPSILON )
             continue;
 
         // Non-Linear force?
         if ( mNonLinear )
         {
             // Yes, so use an approximation of the inverse-square law.
-            distanceForce *= (1.0f / distanceForce.LengthSquared()) * forceSqr;
+            distanceForce *= (1.0f / distanceSqr) * forceSqr;
         }
         else
         {
