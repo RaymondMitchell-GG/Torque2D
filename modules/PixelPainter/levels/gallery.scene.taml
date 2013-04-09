@@ -18,7 +18,7 @@
       LockedImage="PixelPainter:Locked"
       SceneLayer="7"
       size="160 90"
-      Position="0 -0.5"
+      Position="0 -0"
       CollisionSuppress="1" 
       UseInputEvents="1"      
       Image="@asset=PixelPainter:DarkOverlay"
