@@ -29,10 +29,10 @@
 
 //------------------------------------------------------------------------------  
 
-class WaveComposite : public CompositeSprite
+class WaveComposite : public SceneObject, public SpriteBatch
 {
 protected:
-    typedef CompositeSprite Parent;
+    typedef SceneObject Parent;
 
 private:
     AssetPtr<ImageAsset>        mImageAsset;
@@ -53,12 +53,17 @@ public:
 
     static void initPersistFields();
 
-    virtual bool validRender( void ) const { return mImageAsset.notNull(); }
     virtual void preIntegrate( const F32 totalTime, const F32 elapsedTime, DebugStats* pDebugStats );
     virtual void integrateObject( const F32 totalTime, const F32 elapsedTime, DebugStats* pDebugStats );
     virtual void interpolateObject( const F32 timeDelta );
 
     virtual void copyTo( SimObject* object );
+
+    virtual bool canPrepareRender( void ) const { return true; }
+    virtual bool validRender( void ) const { return mImageAsset.notNull(); }
+    virtual bool shouldRender( void ) const { return true; }
+    virtual void scenePrepareRender( const SceneRenderState* pSceneRenderState, SceneRenderQueue* pSceneRenderQueue );    
+    virtual void sceneRender( const SceneRenderState* pSceneRenderState, const SceneRenderRequest* pSceneRenderRequest, BatchRender* pBatchRenderer );
 
     bool setImage( const char* pImageAssetId );
     inline StringTableEntry getImage( void ) const { return mImageAsset.getAssetId(); }
@@ -82,7 +87,7 @@ protected:
 
 protected:
     static bool setImage(void* obj, const char* data) { static_cast<WaveComposite*>(obj)->setImage( data ); return false; }
-    static const char* getImage(void* obj, const char* data) { return DYNAMIC_VOID_CAST_TO(WaveComposite, SpriteProxyBase, obj)->getImage(); }
+    static const char* getImage(void* obj, const char* data) { return DYNAMIC_VOID_CAST_TO(WaveComposite, ImageFrameProvider, obj)->getImage(); }
     static bool writeImage( void* obj, StringTableEntry pFieldName ) { return static_cast<WaveComposite*>(obj)->mImageAsset.notNull(); }
     static bool setImageFrame(void* obj, const char* data) { static_cast<WaveComposite*>(obj)->setImageFrame( dAtoi(data) ); return false; }
     static bool writeImageFrame( void* obj, StringTableEntry pFieldName ) { return static_cast<WaveComposite*>(obj)->getImageFrame() > 0; }
