@@ -79,9 +79,9 @@
       size="20 10"
       Position="55 30"                
       UseInputEvents="1"
-      Image="@asset=PixelPainter:MainMenuBtn"
-      upImage="PixelPainter:MainMenuBtn"
-      downImage="PixelPainter:MainMenuBtnDown"
+      Image="@asset=PixelPainter:PauseBtn"
+      upImage="PixelPainter:PauseBtn"
+      downImage="PixelPainter:PauseBtnDown"
       Frame="0" />
    <ImageFont
       Image="PixelPainter:Font"

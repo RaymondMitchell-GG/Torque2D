@@ -33,7 +33,7 @@
       size="20 10"
       Position="0 10"                
       UseInputEvents="1"
-      Image="@asset=PixelPainter:MainMenuBtn"
-      upImage="PixelPainter:MainMenuBtn"
-      downImage="PixelPainter:MainMenuBtnDown" />
+      Image="@asset=PixelPainter:ResumeBtn"
+      upImage="PixelPainter:ResumeBtn"
+      downImage="PixelPainter:ResumeBtnDown" />
 </Scene>

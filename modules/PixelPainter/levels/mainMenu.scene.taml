@@ -39,9 +39,9 @@
       Position="0 -5"
       CollisionSuppress="1" 
       UseInputEvents="1"
-      Image="@asset=PixelPainter:PlayBtn"
-      upImage="PixelPainter:PlayBtn"
-      downImage="PixelPainter:PlayBtnDown"
+      Image="@asset=PixelPainter:ContinueBtn"
+      upImage="PixelPainter:ContinueBtn"
+      downImage="PixelPainter:ContinueBtnDown"
       Frame="0"
       Name="bContinueButton" />
    <Sprite
@@ -51,9 +51,9 @@
       Position="0 -15"
       CollisionSuppress="1" 
       UseInputEvents="1"
-      Image="@asset=PixelPainter:SmallMenuBar"
-      upImage="PixelPainter:SmallMenuBar"
-      downImage="PixelPainter:SmallMenuBar"
+      Image="@asset=PixelPainter:GalleryBtn"
+      upImage="PixelPainter:GalleryBtn"
+      downImage="PixelPainter:GalleryBtnDown"
       Frame="0"
       Name="bGalleryButton" />
    <Sprite
