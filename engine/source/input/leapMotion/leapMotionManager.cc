@@ -88,6 +88,7 @@ LeapMotionManager::LeapMotionManager()
     mEnabled = false;
     mActive = false;
     mMouseControl = false;
+    mMinCircleProgress = 0.0;
 }
 
 //-----------------------------------------------------------------------------
@@ -198,6 +199,45 @@ bool LeapMotionManager::getMouseControlToggle()
 }
 
 //-----------------------------------------------------------------------------
+// You can get and set gesture configuration parameters using the Config object
+// obtained from a connected Controller object. The key strings required to
+// * identify a configuration parameter include:
+//*
+//* Key string | Value type | Default value | Units
+//* -----------|------------|---------------|------
+//* Gesture.Circle.MinRadius | float | 5.0 | mm
+//* Gesture.Circle.MinArc | float | 1.5 | radians
+//* Gesture.Swipe.MinLength | float | 150 | mm
+//* Gesture.Swipe.MinVelocity | float | 1000 | mm/s
+//* Gesture.KeyTap.MinDownVelocity | float | 50 | mm/s
+//* Gesture.KeyTap.HistorySeconds | float | 0.1 | s
+//* Gesture.KeyTap.MinDistance | float | 3.0 | mm
+//* Gesture.ScreenTap.MinForwardVelocity  | float | 50 | mm/s
+//* Gesture.ScreenTap.HistorySeconds | float | 0.1 | s
+//* Gesture.ScreenTap.MinDistance | float | 5.0 | mm
+bool LeapMotionManager::configureLeapGesture(const char* configString, const F32 value)
+{
+    // Get this controller's config.
+    Leap::Config config = mController->config();
+    
+    // Convert and pass the key, along with the value.
+    std::string *keyString = new std::string(configString);
+    bool success = config.setFloat(*keyString, value);
+    
+    // Free memory and return the result.
+    delete keyString;
+    return success;
+}
+
+//-----------------------------------------------------------------------------
+
+bool LeapMotionManager::setMinCircleProgress(const F32 value)
+{
+    mMinCircleProgress = value;
+    return true;
+}
+
+//-----------------------------------------------------------------------------
 
 void LeapMotionManager::processHand(const Leap::Hand& hand, S32 id)
 {
@@ -295,6 +335,10 @@ void LeapMotionManager::processGestures(const Leap::GestureList& gestures)
             case Leap::Gesture::TYPE_CIRCLE:
             {
                 Leap::CircleGesture circle = gesture;
+
+                if (circle.progress() < mMinCircleProgress)
+                    break;
+
                 bool clockWise;
 
                 if (circle.pointable().direction().angleTo(circle.normal()) <= Leap::PI/4) 
@@ -513,7 +557,7 @@ void LeapMotionManager::MotionListener::onFrame(const Leap::Controller& controll
 
 //-----------------------------------------------------------------------------
 
-void LeapMotionManager::MotionListener::onConnect (const Leap::Controller &controller)
+void LeapMotionManager::MotionListener::onConnect(const Leap::Controller& controller)
 {
     gLeapMotionManager->setActive(true);
     controller.enableGesture(Leap::Gesture::TYPE_CIRCLE);
@@ -524,7 +568,17 @@ void LeapMotionManager::MotionListener::onConnect (const Leap::Controller &contr
 
 //-----------------------------------------------------------------------------
 
-void LeapMotionManager::MotionListener::onDisconnect (const Leap::Controller &controller)
+void LeapMotionManager::MotionListener::onDisconnect (const Leap::Controller& controller)
+{
+    gLeapMotionManager->setActive(false);
+}
+
+void LeapMotionManager::MotionListener::onFocusGained(const Leap::Controller& controller)
+{
+    gLeapMotionManager->setActive(true);
+}
+
+void LeapMotionManager::MotionListener::onFocusLost(const Leap::Controller& controller)
 {
     gLeapMotionManager->setActive(false);
 }
